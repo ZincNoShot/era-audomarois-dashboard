@@ -313,3 +313,19 @@ export function getInitials(name: string): string {
 
 // Legacy alias kept for any remaining call-sites
 export const fmtEur = formatCurrency;
+
+// ─── Dynamic Agent Stats (base YTD + sold properties) ─────────────────────────
+
+export function computeAgentStats(
+  agentId: number,
+  properties: Property[]
+): { volume: number; ventes: number } {
+  const base = AGENT_BASE_STATS[agentId] ?? { volume: 0, ventes: 0 };
+  const sold = properties.filter(
+    (p) => p.agentId === agentId && p.status === "Vendu"
+  );
+  return {
+    volume: base.volume + sold.reduce((s, p) => s + p.price, 0),
+    ventes: base.ventes + sold.length,
+  };
+}

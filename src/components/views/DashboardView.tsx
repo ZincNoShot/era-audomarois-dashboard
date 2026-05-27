@@ -14,9 +14,9 @@ import {
   ActivityEntry,
   UserSession,
   AGENTS,
-  AGENT_BASE_STATS,
   AGENT_MONTHLY_OBJECTIVE,
   ACTIVITY_ICON,
+  computeAgentStats,
   formatCurrency,
   relativeDate,
 } from "@/lib/data";
@@ -48,7 +48,8 @@ export default function DashboardView({
     .filter((p) => p.status !== "Vendu")
     .reduce((s, p) => s + p.price * 0.04, 0);
 
-  const maxVol = Math.max(...AGENTS.map((a) => AGENT_BASE_STATS[a.id]?.volume ?? 0));
+  // Fix 4: use computeAgentStats so "Vendu" properties add to volume+ventes live
+  const maxVol = Math.max(...AGENTS.map((a) => computeAgentStats(a.id, properties).volume));
 
   return (
     <main
@@ -152,11 +153,11 @@ export default function DashboardView({
             {[...AGENTS]
               .sort(
                 (a, b) =>
-                  (AGENT_BASE_STATS[b.id]?.volume ?? 0) -
-                  (AGENT_BASE_STATS[a.id]?.volume ?? 0)
+                  computeAgentStats(b.id, properties).volume -
+                  computeAgentStats(a.id, properties).volume
               )
               .map((agent, i) => {
-                const stats = AGENT_BASE_STATS[agent.id] ?? { volume: 0, ventes: 0 };
+                const stats = computeAgentStats(agent.id, properties);
                 const pct = maxVol > 0 ? (stats.volume / maxVol) * 100 : 0;
                 return (
                   <div key={agent.id}>
@@ -248,7 +249,7 @@ export default function DashboardView({
                 }}
               >
                 {formatCurrency(
-                  AGENTS.reduce((s, a) => s + (AGENT_BASE_STATS[a.id]?.volume ?? 0), 0)
+                  AGENTS.reduce((s, a) => s + computeAgentStats(a.id, properties).volume, 0)
                 )}
               </div>
               <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
@@ -257,7 +258,7 @@ export default function DashboardView({
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: "#f4f4f5" }}>
-                {AGENTS.reduce((s, a) => s + (AGENT_BASE_STATS[a.id]?.ventes ?? 0), 0)}
+                {AGENTS.reduce((s, a) => s + computeAgentStats(a.id, properties).ventes, 0)}
               </div>
               <div style={{ fontSize: 11, color: "#52525b", marginTop: 2 }}>
                 Ventes clôturées
@@ -267,7 +268,7 @@ export default function DashboardView({
               <div style={{ fontSize: 16, fontWeight: 600, color: "#86efac" }}>
                 {formatCurrency(
                   AGENTS.reduce(
-                    (s, a) => s + (AGENT_BASE_STATS[a.id]?.volume ?? 0) * 0.04,
+                    (s, a) => s + computeAgentStats(a.id, properties).volume * 0.04,
                     0
                   )
                 )}

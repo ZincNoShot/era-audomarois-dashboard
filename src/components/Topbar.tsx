@@ -25,9 +25,14 @@ interface TopbarProps {
   currentView: NavSection;
   userSession: UserSession;
   onLogout: () => void;
+  globalSearch: string;
+  onSearch: (q: string) => void;
 }
 
-export default function Topbar({ currentView, userSession, onLogout }: TopbarProps) {
+// Views where the topbar search actively filters content
+const SEARCHABLE_VIEWS: NavSection[] = ["properties", "leads"];
+
+export default function Topbar({ currentView, userSession, onLogout, globalSearch, onSearch }: TopbarProps) {
   const [hasNotif, setHasNotif] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -85,16 +90,21 @@ export default function Topbar({ currentView, userSession, onLogout }: TopbarPro
           }}
         />
         <input
+          value={SEARCHABLE_VIEWS.includes(currentView) ? globalSearch : ""}
+          onChange={(e) =>
+            SEARCHABLE_VIEWS.includes(currentView) && onSearch(e.target.value)
+          }
           placeholder={PLACEHOLDERS[currentView]}
           style={{
             width: "100%",
             maxWidth: 380,
             background: "#18181b",
-            border: "1px solid #27272a",
+            border: `1px solid ${globalSearch && SEARCHABLE_VIEWS.includes(currentView) ? "#4f46e5" : "#27272a"}`,
             borderRadius: 8,
             padding: "7px 10px 7px 30px",
             fontSize: 13,
             color: "#e4e4e7",
+            transition: "border-color 0.15s",
           }}
         />
       </div>

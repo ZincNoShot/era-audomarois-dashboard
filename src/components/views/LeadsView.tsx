@@ -22,6 +22,7 @@ interface LeadsViewProps {
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
   addActivity: (entry: Omit<ActivityEntry, "id">) => void;
   userSession: UserSession;
+  externalSearch?: string;
 }
 
 type TabFilter = "Tous" | LeadStatus;
@@ -40,7 +41,13 @@ interface FormErrors {
   tel?: string;
 }
 
-export default function LeadsView({ leads, setLeads, addActivity, userSession: _userSession }: LeadsViewProps) {
+export default function LeadsView({
+  leads,
+  setLeads,
+  addActivity,
+  userSession: _userSession,
+  externalSearch = "",
+}: LeadsViewProps) {
   const [tab, setTab] = useState<TabFilter>("Tous");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -58,10 +65,19 @@ export default function LeadsView({ leads, setLeads, addActivity, userSession: _
     [leads]
   );
 
-  const filtered = useMemo(
-    () => (tab === "Tous" ? leads : leads.filter((l) => l.status === tab)),
-    [leads, tab]
-  );
+  const filtered = useMemo(() => {
+    const queries = [externalSearch]
+      .map((q) => q.toLowerCase().trim())
+      .filter(Boolean);
+    return leads.filter((l) => {
+      if (tab !== "Tous" && l.status !== tab) return false;
+      if (queries.length > 0) {
+        const hay = `${l.nom} ${l.secteur}`.toLowerCase();
+        if (!queries.every((q) => hay.includes(q))) return false;
+      }
+      return true;
+    });
+  }, [leads, tab, externalSearch]);
 
   const validate = (): boolean => {
     const e: FormErrors = {};

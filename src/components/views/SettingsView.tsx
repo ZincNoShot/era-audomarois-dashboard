@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Bell, Palette, Database, Save, RotateCcw } from "lucide-react";
+import { Building2, Bell, Palette, Database, Save, RotateCcw, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { AGENTS, LS_PROPERTIES, LS_LEADS, LS_ACTIVITY } from "@/lib/data";
 
@@ -211,6 +211,43 @@ export default function SettingsView() {
               </span>
             </div>
           ))}
+
+          {/* Disabled add-agent placeholder */}
+          <div style={{ position: "relative" }}>
+            <button
+              disabled
+              title="Gestion d'équipe globale — Configuration base de données requise en production."
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                width: "100%",
+                padding: "10px 16px",
+                borderRadius: 8,
+                border: "1px dashed #27272a",
+                background: "transparent",
+                color: "#3f3f46",
+                fontSize: 13,
+                cursor: "not-allowed",
+                marginTop: 4,
+              }}
+            >
+              <UserPlus size={14} />
+              Ajouter un Agent
+            </button>
+            <p
+              style={{
+                marginTop: 6,
+                fontSize: 11,
+                color: "#3f3f46",
+                textAlign: "center",
+                lineHeight: 1.4,
+              }}
+            >
+              Gestion d&apos;équipe globale — Configuration base de données requise en production.
+            </p>
+          </div>
         </div>
       </Section>
 

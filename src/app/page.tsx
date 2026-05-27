@@ -37,6 +37,7 @@ function loadLS<T>(key: string, fallback: T): T {
 export default function Home() {
   const [currentView, setCurrentView] = useState<NavSection>("dashboard");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [globalSearch, setGlobalSearch] = useState("");
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
   const [activity, setActivity] = useState<ActivityEntry[]>(INITIAL_ACTIVITY);
@@ -79,9 +80,15 @@ export default function Home() {
     );
   }, []);
 
+  const handleViewChange = useCallback((view: NavSection) => {
+    setCurrentView(view);
+    setGlobalSearch(""); // clear search when navigating to a new section
+  }, []);
+
   const handleLogin = useCallback((session: UserSession) => {
     setUserSession(session);
     setCurrentView("dashboard");
+    setGlobalSearch("");
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -105,7 +112,7 @@ export default function Home() {
     >
       <Sidebar
         active={currentView}
-        setActive={setCurrentView}
+        setActive={handleViewChange}
         userSession={userSession}
       />
 
@@ -122,6 +129,8 @@ export default function Home() {
           currentView={currentView}
           userSession={userSession}
           onLogout={handleLogout}
+          globalSearch={globalSearch}
+          onSearch={setGlobalSearch}
         />
 
         {currentView === "dashboard" && (
@@ -138,6 +147,7 @@ export default function Home() {
             setProperties={setProperties}
             addActivity={addActivity}
             userSession={userSession}
+            externalSearch={globalSearch}
           />
         )}
         {currentView === "leads" && (
@@ -146,6 +156,7 @@ export default function Home() {
             setLeads={setLeads}
             addActivity={addActivity}
             userSession={userSession}
+            externalSearch={globalSearch}
           />
         )}
         {currentView === "performance" && (

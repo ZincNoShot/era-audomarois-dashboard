@@ -6,8 +6,8 @@ import {
   Lead,
   UserSession,
   AGENTS,
-  AGENT_BASE_STATS,
   AGENT_MONTHLY_OBJECTIVE,
+  computeAgentStats,
   formatCurrency,
 } from "@/lib/data";
 
@@ -18,13 +18,14 @@ interface PerformanceViewProps {
 }
 
 export default function PerformanceView({ properties, leads, userSession }: PerformanceViewProps) {
+  // Fix 4: computeAgentStats adds sold-property volume+ventes on top of historical base
   const teamVolume = AGENTS.reduce(
-    (s, a) => s + (AGENT_BASE_STATS[a.id]?.volume ?? 0),
+    (s, a) => s + computeAgentStats(a.id, properties).volume,
     0
   );
   const teamCommissions = teamVolume * 0.04;
   const teamVentes = AGENTS.reduce(
-    (s, a) => s + (AGENT_BASE_STATS[a.id]?.ventes ?? 0),
+    (s, a) => s + computeAgentStats(a.id, properties).ventes,
     0
   );
   const teamObjectifProgress = Math.min(
@@ -98,11 +99,11 @@ export default function PerformanceView({ properties, leads, userSession }: Perf
         {[...AGENTS]
           .sort(
             (a, b) =>
-              (AGENT_BASE_STATS[b.id]?.volume ?? 0) -
-              (AGENT_BASE_STATS[a.id]?.volume ?? 0)
+              computeAgentStats(b.id, properties).volume -
+              computeAgentStats(a.id, properties).volume
           )
           .map((agent, rank) => {
-            const stats = AGENT_BASE_STATS[agent.id] ?? { volume: 0, ventes: 0 };
+            const stats = computeAgentStats(agent.id, properties);
             const commissions = stats.volume * 0.04;
             const activeListings = properties.filter(
               (p) => p.agentId === agent.id && p.status === "Actif"

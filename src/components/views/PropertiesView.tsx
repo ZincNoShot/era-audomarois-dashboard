@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, SlidersHorizontal } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import {
@@ -20,6 +20,7 @@ interface PropertiesViewProps {
   setProperties: React.Dispatch<React.SetStateAction<Property[]>>;
   addActivity: (entry: Omit<ActivityEntry, "id">) => void;
   userSession: UserSession;
+  externalSearch?: string;
 }
 
 type TabFilter = "Tous" | PropertyStatus;
@@ -39,34 +40,54 @@ export default function PropertiesView({
   setProperties,
   addActivity,
   userSession,
+  externalSearch = "",
 }: PropertiesViewProps) {
   const [tab, setTab] = useState<TabFilter>("Tous");
   const [search, setSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  // Agents default to seeing their own listings; directors see all
   const [agentFilter, setAgentFilter] = useState<string>(
     userSession.role === "agent" && userSession.agentId
       ? String(userSession.agentId)
       : "Tous"
   );
+
+  // Fix 1: track open dropdown AND its fixed screen position
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+
+  // Close dropdown on any scroll or resize so position stays valid
+  useEffect(() => {
+    if (openDropdown === null) return;
+    const close = () => setOpenDropdown(null);
+    document.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [openDropdown]);
 
   const counts = useMemo(() => TAB_COUNTS(properties), [properties]);
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
     const min = minPrice ? parseInt(minPrice, 10) : 0;
     const max = maxPrice ? parseInt(maxPrice, 10) : Infinity;
+    // All active query terms (local + global topbar)
+    const queries = [search, externalSearch]
+      .map((q) => q.toLowerCase().trim())
+      .filter(Boolean);
+
     return properties.filter((p) => {
       if (tab !== "Tous" && p.status !== tab) return false;
-      if (q && !p.title.toLowerCase().includes(q) && !p.address.toLowerCase().includes(q))
-        return false;
       if (p.price < min || p.price > max) return false;
       if (agentFilter !== "Tous" && p.agentId !== parseInt(agentFilter, 10)) return false;
+      const agentName = AGENTS.find((a) => a.id === p.agentId)?.name ?? "";
+      const hay = `${p.title} ${p.address} ${agentName}`.toLowerCase();
+      if (!queries.every((q) => hay.includes(q))) return false;
       return true;
     });
-  }, [properties, tab, search, minPrice, maxPrice, agentFilter]);
+  }, [properties, tab, search, externalSearch, minPrice, maxPrice, agentFilter]);
 
   const changeStatus = (id: number, newStatus: PropertyStatus) => {
     const prop = properties.find((p) => p.id === id);
@@ -84,6 +105,20 @@ export default function PropertiesView({
     setOpenDropdown(null);
   };
 
+  // Fix 1: open dropdown at the button's fixed viewport position
+  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
+    e.stopPropagation();
+    if (openDropdown === id) {
+      setOpenDropdown(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    // If dropdown would clip right edge, shift left
+    const left = rect.right + 148 > window.innerWidth ? rect.right - 148 : rect.left;
+    setDropdownPos({ top: rect.bottom + 4, left });
+    setOpenDropdown(id);
+  };
+
   return (
     <main
       style={{
@@ -94,6 +129,8 @@ export default function PropertiesView({
         flexDirection: "column",
         gap: 20,
       }}
+      // Close dropdown when clicking anywhere in the main area
+      onClick={() => setOpenDropdown(null)}
     >
       {/* Header */}
       <div
@@ -281,12 +318,27 @@ export default function PropertiesView({
           </button>
         )}
 
+        {externalSearch && (
+          <span
+            style={{
+              fontSize: 11,
+              color: "#a1a1aa",
+              padding: "3px 8px",
+              borderRadius: 5,
+              background: "#18181b",
+              border: "1px solid #27272a",
+            }}
+          >
+            Recherche globale : «{externalSearch}»
+          </span>
+        )}
+
         <div style={{ marginLeft: "auto", fontSize: 12, color: "#52525b" }}>
           {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — overflow:hidden kept for border-radius; dropdown uses position:fixed to escape */}
       <div
         style={{
           background: "#111113",
@@ -294,7 +346,6 @@ export default function PropertiesView({
           borderRadius: 12,
           overflow: "hidden",
         }}
-        onClick={() => setOpenDropdown(null)}
       >
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -327,6 +378,11 @@ export default function PropertiesView({
                 const agent = AGENTS.find((a) => a.id === p.agentId);
                 const cfg = STATUS_CONFIG[p.status];
                 const isOpen = openDropdown === p.id;
+
+                // Fix 2: agents can only edit their OWN property rows
+                const canEdit =
+                  userSession.role === "directeur" ||
+                  p.agentId === userSession.agentId;
 
                 return (
                   <tr
@@ -391,12 +447,10 @@ export default function PropertiesView({
                     </td>
 
                     <td style={{ padding: "13px 16px" }}>
-                      <div
-                        style={{ position: "relative" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      {canEdit ? (
+                        // Interactive dropdown for authorised users
                         <button
-                          onClick={() => setOpenDropdown(isOpen ? null : p.id)}
+                          onClick={(e) => openMenu(e, p.id)}
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -422,66 +476,39 @@ export default function PropertiesView({
                             }}
                           />
                           {p.status}
-                          <span style={{ marginLeft: 2, opacity: 0.6, fontSize: 9 }}>▼</span>
+                          <span style={{ marginLeft: 2, opacity: 0.5, fontSize: 9 }}>▼</span>
                         </button>
-
-                        {isOpen && (
-                          <div
-                            className="animate-modal"
+                      ) : (
+                        // Read-only badge for agents viewing other people's listings
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "4px 9px",
+                            borderRadius: 6,
+                            background: cfg.bg,
+                            border: `1px solid ${cfg.border}`,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: cfg.text,
+                            whiteSpace: "nowrap",
+                            opacity: 0.7,
+                          }}
+                          title="Vous ne pouvez modifier que vos propres mandats"
+                        >
+                          <span
                             style={{
-                              position: "absolute",
-                              top: "calc(100% + 4px)",
-                              left: 0,
-                              zIndex: 50,
-                              background: "#18181b",
-                              border: "1px solid #27272a",
-                              borderRadius: 8,
-                              padding: "4px",
-                              minWidth: 140,
-                              boxShadow: "0 8px 24px #00000080",
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: cfg.dot,
+                              flexShrink: 0,
                             }}
-                          >
-                            {STATUS_ORDER.map((s) => {
-                              const sc = STATUS_CONFIG[s];
-                              return (
-                                <button
-                                  key={s}
-                                  onClick={() => changeStatus(p.id, s)}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 6,
-                                    width: "100%",
-                                    padding: "7px 10px",
-                                    borderRadius: 6,
-                                    border: "none",
-                                    background:
-                                      p.status === s ? "#27272a" : "transparent",
-                                    cursor: "pointer",
-                                    fontSize: 12,
-                                    color: sc.text,
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  <span
-                                    style={{
-                                      width: 6,
-                                      height: 6,
-                                      borderRadius: "50%",
-                                      background: sc.dot,
-                                      flexShrink: 0,
-                                    }}
-                                  />
-                                  {s}
-                                  {p.status === s && (
-                                    <span style={{ marginLeft: "auto", fontSize: 10 }}>✓</span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                          />
+                          {p.status}
+                        </span>
+                      )}
                     </td>
 
                     <td style={{ padding: "13px 16px" }}>
@@ -526,6 +553,68 @@ export default function PropertiesView({
           )}
         </div>
       </div>
+
+      {/* Fix 1: Dropdown rendered via position:fixed — escapes all overflow:hidden ancestors */}
+      {openDropdown !== null && (
+        <div
+          className="animate-modal"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            zIndex: 1000,
+            background: "#18181b",
+            border: "1px solid #27272a",
+            borderRadius: 8,
+            padding: "4px",
+            minWidth: 148,
+            boxShadow: "0 12px 32px rgba(0,0,0,0.7)",
+          }}
+        >
+          {(() => {
+            const prop = properties.find((p) => p.id === openDropdown);
+            if (!prop) return null;
+            return STATUS_ORDER.map((s) => {
+              const sc = STATUS_CONFIG[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => changeStatus(prop.id, s)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: prop.status === s ? "#27272a" : "transparent",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: sc.text,
+                    textAlign: "left",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: sc.dot,
+                      flexShrink: 0,
+                    }}
+                  />
+                  {s}
+                  {prop.status === s && (
+                    <span style={{ marginLeft: "auto", fontSize: 10 }}>✓</span>
+                  )}
+                </button>
+              );
+            });
+          })()}
+        </div>
+      )}
     </main>
   );
 }
