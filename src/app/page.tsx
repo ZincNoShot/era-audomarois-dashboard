@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import LoginView from "@/components/LoginView";
 import DashboardView from "@/components/views/DashboardView";
 import PropertiesView from "@/components/views/PropertiesView";
 import LeadsView from "@/components/views/LeadsView";
@@ -13,12 +14,14 @@ import {
   Property,
   Lead,
   ActivityEntry,
+  UserSession,
   INITIAL_PROPERTIES,
   INITIAL_LEADS,
   INITIAL_ACTIVITY,
   LS_PROPERTIES,
   LS_LEADS,
   LS_ACTIVITY,
+  LS_SESSION,
 } from "@/lib/data";
 
 function loadLS<T>(key: string, fallback: T): T {
@@ -33,17 +36,30 @@ function loadLS<T>(key: string, fallback: T): T {
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<NavSection>("dashboard");
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
   const [activity, setActivity] = useState<ActivityEntry[]>(INITIAL_ACTIVITY);
   const [hydrated, setHydrated] = useState(false);
 
+  // Hydrate all state from localStorage on mount
   useEffect(() => {
+    setUserSession(loadLS<UserSession | null>(LS_SESSION, null));
     setProperties(loadLS(LS_PROPERTIES, INITIAL_PROPERTIES));
     setLeads(loadLS(LS_LEADS, INITIAL_LEADS));
     setActivity(loadLS(LS_ACTIVITY, INITIAL_ACTIVITY));
     setHydrated(true);
   }, []);
+
+  // Persist to localStorage after hydration
+  useEffect(() => {
+    if (!hydrated) return;
+    if (userSession) {
+      localStorage.setItem(LS_SESSION, JSON.stringify(userSession));
+    } else {
+      localStorage.removeItem(LS_SESSION);
+    }
+  }, [userSession, hydrated]);
 
   useEffect(() => {
     if (hydrated) localStorage.setItem(LS_PROPERTIES, JSON.stringify(properties));
@@ -63,6 +79,21 @@ export default function Home() {
     );
   }, []);
 
+  const handleLogin = useCallback((session: UserSession) => {
+    setUserSession(session);
+    setCurrentView("dashboard");
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setUserSession(null);
+    setCurrentView("dashboard");
+  }, []);
+
+  // Show login screen if no active session
+  if (!userSession) {
+    return <LoginView onLogin={handleLogin} />;
+  }
+
   return (
     <div
       style={{
@@ -72,7 +103,11 @@ export default function Home() {
         fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
       }}
     >
-      <Sidebar active={currentView} setActive={setCurrentView} />
+      <Sidebar
+        active={currentView}
+        setActive={setCurrentView}
+        userSession={userSession}
+      />
 
       <div
         style={{
@@ -83,13 +118,18 @@ export default function Home() {
           minWidth: 0,
         }}
       >
-        <Topbar currentView={currentView} />
+        <Topbar
+          currentView={currentView}
+          userSession={userSession}
+          onLogout={handleLogout}
+        />
 
         {currentView === "dashboard" && (
           <DashboardView
             properties={properties}
             leads={leads}
             activity={activity}
+            userSession={userSession}
           />
         )}
         {currentView === "properties" && (
@@ -97,6 +137,7 @@ export default function Home() {
             properties={properties}
             setProperties={setProperties}
             addActivity={addActivity}
+            userSession={userSession}
           />
         )}
         {currentView === "leads" && (
@@ -104,12 +145,19 @@ export default function Home() {
             leads={leads}
             setLeads={setLeads}
             addActivity={addActivity}
+            userSession={userSession}
           />
         )}
         {currentView === "performance" && (
-          <PerformanceView properties={properties} leads={leads} />
+          <PerformanceView
+            properties={properties}
+            leads={leads}
+            userSession={userSession}
+          />
         )}
-        {currentView === "settings" && <SettingsView />}
+        {currentView === "settings" && userSession.role === "directeur" && (
+          <SettingsView />
+        )}
       </div>
     </div>
   );

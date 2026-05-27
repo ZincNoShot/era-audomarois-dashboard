@@ -7,6 +7,7 @@ import {
   Lead,
   LeadStatus,
   ActivityEntry,
+  UserSession,
   LEAD_STATUS_CONFIG,
   LEAD_STATUS_ORDER,
   SECTEURS,
@@ -20,6 +21,7 @@ interface LeadsViewProps {
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
   addActivity: (entry: Omit<ActivityEntry, "id">) => void;
+  userSession: UserSession;
 }
 
 type TabFilter = "Tous" | LeadStatus;
@@ -38,7 +40,7 @@ interface FormErrors {
   tel?: string;
 }
 
-export default function LeadsView({ leads, setLeads, addActivity }: LeadsViewProps) {
+export default function LeadsView({ leads, setLeads, addActivity, userSession: _userSession }: LeadsViewProps) {
   const [tab, setTab] = useState<TabFilter>("Tous");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);

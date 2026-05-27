@@ -8,6 +8,7 @@ import {
   Property,
   PropertyStatus,
   ActivityEntry,
+  UserSession,
   STATUS_CONFIG,
   STATUS_ORDER,
   formatCurrency,
@@ -18,6 +19,7 @@ interface PropertiesViewProps {
   properties: Property[];
   setProperties: React.Dispatch<React.SetStateAction<Property[]>>;
   addActivity: (entry: Omit<ActivityEntry, "id">) => void;
+  userSession: UserSession;
 }
 
 type TabFilter = "Tous" | PropertyStatus;
@@ -36,12 +38,18 @@ export default function PropertiesView({
   properties,
   setProperties,
   addActivity,
+  userSession,
 }: PropertiesViewProps) {
   const [tab, setTab] = useState<TabFilter>("Tous");
   const [search, setSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [agentFilter, setAgentFilter] = useState<string>("Tous");
+  // Agents default to seeing their own listings; directors see all
+  const [agentFilter, setAgentFilter] = useState<string>(
+    userSession.role === "agent" && userSession.agentId
+      ? String(userSession.agentId)
+      : "Tous"
+  );
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
   const counts = useMemo(() => TAB_COUNTS(properties), [properties]);
@@ -109,6 +117,21 @@ export default function PropertiesView({
           </h1>
           <p style={{ fontSize: 13, color: "#52525b", marginTop: 2 }}>
             {properties.length} mandat{properties.length !== 1 ? "s" : ""} en portefeuille
+            {userSession.role === "agent" && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontSize: 11,
+                  padding: "2px 7px",
+                  borderRadius: 5,
+                  background: "rgba(124,58,237,0.12)",
+                  border: "1px solid rgba(124,58,237,0.3)",
+                  color: "#c4b5fd",
+                }}
+              >
+                Filtre : {userSession.name}
+              </span>
+            )}
           </p>
         </div>
         <button

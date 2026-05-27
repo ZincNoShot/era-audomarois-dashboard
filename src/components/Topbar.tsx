@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, LogOut, ChevronDown } from "lucide-react";
 import Avatar from "./Avatar";
-import { NavSection } from "@/lib/data";
+import { NavSection, UserSession } from "@/lib/data";
 
 const VIEW_LABELS: Record<NavSection, string> = {
   dashboard:   "Tableau de bord",
@@ -23,10 +23,22 @@ const PLACEHOLDERS: Record<NavSection, string> = {
 
 interface TopbarProps {
   currentView: NavSection;
+  userSession: UserSession;
+  onLogout: () => void;
 }
 
-export default function Topbar({ currentView }: TopbarProps) {
+export default function Topbar({ currentView, userSession, onLogout }: TopbarProps) {
   const [hasNotif, setHasNotif] = useState(true);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const initials = userSession.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const avatarColor = userSession.role === "directeur" ? "#e53e3e" : "#7C3AED";
 
   return (
     <header
@@ -44,6 +56,7 @@ export default function Topbar({ currentView }: TopbarProps) {
         flexShrink: 0,
       }}
     >
+      {/* Current section breadcrumb */}
       <span
         style={{
           fontSize: 12,
@@ -56,15 +69,9 @@ export default function Topbar({ currentView }: TopbarProps) {
         {VIEW_LABELS[currentView]}
       </span>
 
-      <div
-        style={{
-          width: 1,
-          height: 14,
-          background: "#27272a",
-          flexShrink: 0,
-        }}
-      />
+      <div style={{ width: 1, height: 14, background: "#27272a", flexShrink: 0 }} />
 
+      {/* Search */}
       <div style={{ flex: 1, position: "relative" }}>
         <Search
           size={13}
@@ -92,6 +99,7 @@ export default function Topbar({ currentView }: TopbarProps) {
         />
       </div>
 
+      {/* Notifications bell */}
       <button
         onClick={() => setHasNotif(false)}
         style={{
@@ -126,7 +134,121 @@ export default function Topbar({ currentView }: TopbarProps) {
         )}
       </button>
 
-      <Avatar initials="DA" color="#e53e3e" size={30} />
+      {/* User menu */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setUserMenuOpen((v) => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "transparent",
+            border: "1px solid #27272a",
+            borderRadius: 8,
+            padding: "4px 10px 4px 6px",
+            cursor: "pointer",
+            transition: "border-color 0.15s",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.borderColor = "#3f3f46")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.borderColor = "#27272a")
+          }
+        >
+          <Avatar initials={initials} color={avatarColor} size={24} />
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 11, fontWeight: 500, color: "#e4e4e7", lineHeight: 1.2 }}>
+              {userSession.name}
+            </div>
+            <div style={{ fontSize: 10, color: "#52525b", lineHeight: 1.2 }}>
+              {userSession.role === "directeur" ? "Directeur" : "Agent"}
+            </div>
+          </div>
+          <ChevronDown
+            size={11}
+            color="#52525b"
+            style={{
+              transform: userMenuOpen ? "rotate(180deg)" : "rotate(0)",
+              transition: "transform 0.15s",
+            }}
+          />
+        </button>
+
+        {userMenuOpen && (
+          <>
+            {/* Backdrop to close menu */}
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 19 }}
+              onClick={() => setUserMenuOpen(false)}
+            />
+            <div
+              className="animate-modal"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                zIndex: 20,
+                background: "#18181b",
+                border: "1px solid #27272a",
+                borderRadius: 10,
+                padding: "4px",
+                minWidth: 180,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+              }}
+            >
+              {/* User info header in dropdown */}
+              <div
+                style={{
+                  padding: "10px 12px 8px",
+                  borderBottom: "1px solid #27272a",
+                  marginBottom: 4,
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#f4f4f5" }}>
+                  {userSession.name}
+                </div>
+                <div style={{ fontSize: 11, color: "#52525b", marginTop: 1 }}>
+                  {userSession.role === "directeur"
+                    ? "Directeur Agence"
+                    : "Agent Commercial"}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onLogout();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: 7,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  color: "#fca5a5",
+                  textAlign: "left",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.background = "#1c0a0a")
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
+                }
+              >
+                <LogOut size={13} />
+                Se déconnecter
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </header>
   );
 }

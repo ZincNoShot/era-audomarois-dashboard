@@ -12,6 +12,7 @@ import {
   Property,
   Lead,
   ActivityEntry,
+  UserSession,
   AGENTS,
   AGENT_BASE_STATS,
   AGENT_MONTHLY_OBJECTIVE,
@@ -24,18 +25,26 @@ interface DashboardViewProps {
   properties: Property[];
   leads: Lead[];
   activity: ActivityEntry[];
+  userSession: UserSession;
 }
 
 export default function DashboardView({
   properties,
   leads,
   activity,
+  userSession,
 }: DashboardViewProps) {
-  const actifs      = properties.filter((p) => p.status === "Actif").length;
-  const compromis   = properties.filter((p) => p.status === "Compromis");
+  // Agents see their own scoped stats; directors see global
+  const scopedProps =
+    userSession.role === "agent" && userSession.agentId
+      ? properties.filter((p) => p.agentId === userSession.agentId)
+      : properties;
+
+  const actifs       = scopedProps.filter((p) => p.status === "Actif").length;
+  const compromis    = scopedProps.filter((p) => p.status === "Compromis");
   const volCompromis = compromis.reduce((s, p) => s + p.price, 0);
   const pendingLeads = leads.filter((l) => l.status === "Nouveau").length;
-  const caEstime    = properties
+  const caEstime     = scopedProps
     .filter((p) => p.status !== "Vendu")
     .reduce((s, p) => s + p.price * 0.04, 0);
 
@@ -65,7 +74,9 @@ export default function DashboardView({
           Tableau de bord
         </h1>
         <p style={{ fontSize: 13, color: "#52525b", marginTop: 2 }}>
-          Vue d&apos;ensemble · Agence de l&apos;Audomarois
+          {userSession.role === "agent"
+            ? `Vue personnelle · ${userSession.name}`
+            : "Vue d'ensemble · Agence de l'Audomarois"}
         </p>
       </div>
 
@@ -377,7 +388,7 @@ export default function DashboardView({
               Mandats Récents
             </div>
             <div style={{ fontSize: 12, color: "#52525b", marginTop: 1 }}>
-              {properties.length} bien{properties.length !== 1 ? "s" : ""} en portefeuille
+              {scopedProps.length} bien{scopedProps.length !== 1 ? "s" : ""} en portefeuille
             </div>
           </div>
         </div>
@@ -407,7 +418,7 @@ export default function DashboardView({
               </tr>
             </thead>
             <tbody>
-              {[...properties]
+              {[...scopedProps]
                 .sort((a, b) => b.updatedAt - a.updatedAt)
                 .slice(0, 5)
                 .map((p) => {

@@ -3,6 +3,71 @@
 export const LS_PROPERTIES = "era_v2_properties";
 export const LS_LEADS      = "era_v2_leads";
 export const LS_ACTIVITY   = "era_v2_activity";
+export const LS_SESSION    = "era_v2_session";
+
+// ─── Auth Types & Credentials ─────────────────────────────────────────────────
+
+export type UserRole = "directeur" | "agent";
+
+export interface UserSession {
+  name: string;
+  role: UserRole;
+  agentId?: number;
+}
+
+interface CredentialRecord {
+  email: string;
+  password: string;
+  session: UserSession;
+}
+
+const CREDENTIAL_MAP: CredentialRecord[] = [
+  {
+    email: "directeur@era-audomarois.fr",
+    password: "ERA2024!",
+    session: { name: "Directeur Agence", role: "directeur" },
+  },
+  {
+    email: "m.bernard@era-audomarois.fr",
+    password: "Agent2024!",
+    session: { name: "Mathieu Bernard", role: "agent", agentId: 1 },
+  },
+  {
+    email: "s.vanlaer@era-audomarois.fr",
+    password: "Agent2024!",
+    session: { name: "Sophie Vanlaer", role: "agent", agentId: 3 },
+  },
+  {
+    email: "d.lecomte@era-audomarois.fr",
+    password: "Agent2024!",
+    session: { name: "Dimitri Lecomte", role: "agent", agentId: 2 },
+  },
+];
+
+export function authenticate(
+  email: string,
+  password: string
+): UserSession | null {
+  const match = CREDENTIAL_MAP.find(
+    (c) =>
+      c.email.toLowerCase() === email.toLowerCase().trim() &&
+      c.password === password
+  );
+  return match ? match.session : null;
+}
+
+export const DEMO_CREDENTIALS = {
+  directeur: {
+    email: "directeur@era-audomarois.fr",
+    password: "ERA2024!",
+    label: "Directeur Agence",
+  },
+  agent: {
+    email: "m.bernard@era-audomarois.fr",
+    password: "Agent2024!",
+    label: "Agent Commercial",
+  },
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

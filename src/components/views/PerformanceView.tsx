@@ -4,6 +4,7 @@ import Avatar from "@/components/Avatar";
 import {
   Property,
   Lead,
+  UserSession,
   AGENTS,
   AGENT_BASE_STATS,
   AGENT_MONTHLY_OBJECTIVE,
@@ -13,9 +14,10 @@ import {
 interface PerformanceViewProps {
   properties: Property[];
   leads: Lead[];
+  userSession: UserSession;
 }
 
-export default function PerformanceView({ properties, leads }: PerformanceViewProps) {
+export default function PerformanceView({ properties, leads, userSession }: PerformanceViewProps) {
   const teamVolume = AGENTS.reduce(
     (s, a) => s + (AGENT_BASE_STATS[a.id]?.volume ?? 0),
     0
@@ -113,19 +115,22 @@ export default function PerformanceView({ properties, leads }: PerformanceViewPr
             );
             const volumePctOfTeam =
               teamVolume > 0 ? (stats.volume / teamVolume) * 100 : 0;
+            const isMe =
+              userSession.role === "agent" && userSession.agentId === agent.id;
 
             return (
               <div
                 key={agent.id}
                 className="animate-fade-in"
                 style={{
-                  background: "#111113",
-                  border: "1px solid #27272a",
+                  background: isMe ? `${agent.color}09` : "#111113",
+                  border: `1px solid ${isMe ? agent.color + "44" : "#27272a"}`,
                   borderRadius: 12,
                   padding: 24,
                   display: "flex",
                   flexDirection: "column",
                   gap: 20,
+                  boxShadow: isMe ? `0 0 0 1px ${agent.color}22` : "none",
                 }}
               >
                 {/* Agent header */}
@@ -154,8 +159,32 @@ export default function PerformanceView({ properties, leads }: PerformanceViewPr
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#f4f4f5" }}>
-                      {agent.name}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: 15, fontWeight: 600, color: "#f4f4f5" }}>
+                        {agent.name}
+                      </span>
+                      {isMe && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            padding: "2px 7px",
+                            borderRadius: 5,
+                            background: agent.color + "22",
+                            border: `1px solid ${agent.color}55`,
+                            color: agent.color,
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          VOUS
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>
                       Agent immobilier · ERA Audomarois
