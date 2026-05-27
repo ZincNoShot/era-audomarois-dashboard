@@ -1,13 +1,15 @@
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Storage Keys ─────────────────────────────────────────────────────────────
+
+export const LS_PROPERTIES = "era_v2_properties";
+export const LS_LEADS      = "era_v2_leads";
+export const LS_ACTIVITY   = "era_v2_activity";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PropertyStatus = "Estimation" | "Actif" | "Compromis" | "Vendu";
-export type LeadStatus = "Nouveau" | "Contacté" | "Qualifié";
-export type NavSection =
-  | "dashboard"
-  | "properties"
-  | "leads"
-  | "performance"
-  | "settings";
+export type LeadStatus     = "Nouveau" | "Contacté" | "Qualifié";
+export type NavSection     = "dashboard" | "properties" | "leads" | "performance" | "settings";
+export type ActivityType   = "lead_added" | "status_changed" | "lead_status_changed" | "property_added";
 
 export interface Agent {
   id: number;
@@ -24,31 +26,38 @@ export interface Property {
   agentId: number;
   status: PropertyStatus;
   type: string;
+  updatedAt: number;
 }
 
 export interface Lead {
   id: number;
   nom: string;
-  budget: string;
+  budget: number;
   secteur: string;
   tel: string;
   status: LeadStatus;
+  createdAt: number;
 }
 
-export interface AgentPerf {
-  agent: Agent;
-  volume: number;
-  ventes: number;
-  color: string;
+export interface ActivityEntry {
+  id: number;
+  label: string;
+  type: ActivityType;
+  ts: number;
 }
 
-// ─── Static Data ─────────────────────────────────────────────────────────────
+// ─── Agents ───────────────────────────────────────────────────────────────────
 
 export const AGENTS: Agent[] = [
   { id: 1, name: "Mathieu Bernard", initials: "MB", color: "#7C3AED" },
   { id: 2, name: "Dimitri Lecomte", initials: "DL", color: "#0891B2" },
   { id: 3, name: "Sophie Vanlaer",  initials: "SV", color: "#059669" },
 ];
+
+// ─── Initial Data ─────────────────────────────────────────────────────────────
+
+const NOW = Date.now();
+const DAY = 86_400_000;
 
 export const INITIAL_PROPERTIES: Property[] = [
   {
@@ -59,6 +68,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     agentId: 1,
     status: "Actif",
     type: "Maison",
+    updatedAt: NOW - DAY * 2,
   },
   {
     id: 2,
@@ -68,6 +78,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     agentId: 2,
     status: "Actif",
     type: "Pavillon",
+    updatedAt: NOW - DAY * 5,
   },
   {
     id: 3,
@@ -77,6 +88,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     agentId: 3,
     status: "Compromis",
     type: "Appartement",
+    updatedAt: NOW - DAY,
   },
   {
     id: 4,
@@ -86,6 +98,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     agentId: 1,
     status: "Estimation",
     type: "Corps de ferme",
+    updatedAt: NOW - DAY * 7,
   },
 ];
 
@@ -93,65 +106,90 @@ export const INITIAL_LEADS: Lead[] = [
   {
     id: 1,
     nom: "Caroline Dumont",
-    budget: "200 000 – 250 000 €",
-    secteur: "Longuenesse / Saint-Martin",
-    tel: "06 12 34 56 78",
+    budget: 250_000,
+    secteur: "Longuenesse",
+    tel: "0612345678",
     status: "Nouveau",
+    createdAt: NOW - DAY * 3,
   },
   {
     id: 2,
     nom: "François Bertrand",
-    budget: "300 000 – 350 000 €",
-    secteur: "Centre-ville Saint-Omer",
-    tel: "07 98 76 54 32",
+    budget: 350_000,
+    secteur: "Saint-Omer Centre",
+    tel: "0798765432",
     status: "Contacté",
+    createdAt: NOW - DAY * 6,
   },
   {
     id: 3,
     nom: "Isabelle Morel",
-    budget: "100 000 – 150 000 €",
-    secteur: "Proche Gare",
-    tel: "06 45 67 89 01",
+    budget: 150_000,
+    secteur: "Arques",
+    tel: "0645678901",
     status: "Nouveau",
+    createdAt: NOW - DAY,
   },
 ];
 
-export const TEAM_PERF: AgentPerf[] = [
-  { agent: AGENTS[0], volume: 1_240_000, ventes: 4, color: "#7C3AED" },
-  { agent: AGENTS[1], volume:   860_000, ventes: 3, color: "#0891B2" },
-  { agent: AGENTS[2], volume:   980_000, ventes: 3, color: "#059669" },
+export const INITIAL_ACTIVITY: ActivityEntry[] = [
+  {
+    id: 1,
+    label: "Statut mis à jour : Appartement T2 → Compromis",
+    type: "status_changed",
+    ts: NOW - DAY,
+  },
+  {
+    id: 2,
+    label: "Nouveau lead ajouté : Isabelle Morel",
+    type: "lead_added",
+    ts: NOW - DAY,
+  },
+  {
+    id: 3,
+    label: "Lead contacté : François Bertrand",
+    type: "lead_status_changed",
+    ts: NOW - DAY * 2,
+  },
+  {
+    id: 4,
+    label: "Mandat entré : Maison bourgeoise 6 pièces",
+    type: "property_added",
+    ts: NOW - DAY * 2,
+  },
 ];
 
-// ─── Status Config ────────────────────────────────────────────────────────────
+// ─── Agent Performance Base (YTD historical volumes) ──────────────────────────
+
+export const AGENT_MONTHLY_OBJECTIVE = 500_000;
+
+export const AGENT_BASE_STATS: Record<number, { volume: number; ventes: number }> = {
+  1: { volume: 1_240_000, ventes: 4 },
+  2: { volume:   860_000, ventes: 3 },
+  3: { volume:   980_000, ventes: 3 },
+};
+
+// ─── Sector Options ───────────────────────────────────────────────────────────
+
+export const SECTEURS = [
+  "Saint-Omer Centre",
+  "Longuenesse",
+  "Arques",
+  "Clairmarais",
+] as const;
+
+export type Secteur = (typeof SECTEURS)[number];
+
+// ─── Status Configuration ─────────────────────────────────────────────────────
 
 export const STATUS_CONFIG: Record<
   PropertyStatus,
   { bg: string; border: string; text: string; dot: string }
 > = {
-  Estimation: {
-    bg: "#1c1917",
-    border: "#78716c",
-    text: "#d6d3d1",
-    dot: "#a8a29e",
-  },
-  Actif: {
-    bg: "#052e16",
-    border: "#16a34a",
-    text: "#86efac",
-    dot: "#22c55e",
-  },
-  Compromis: {
-    bg: "#1e1b4b",
-    border: "#4f46e5",
-    text: "#a5b4fc",
-    dot: "#818cf8",
-  },
-  Vendu: {
-    bg: "#0c0a09",
-    border: "#57534e",
-    text: "#a8a29e",
-    dot: "#78716c",
-  },
+  Estimation: { bg: "#1c1917", border: "#78716c", text: "#d6d3d1", dot: "#a8a29e" },
+  Actif:      { bg: "#052e16", border: "#16a34a", text: "#86efac", dot: "#22c55e" },
+  Compromis:  { bg: "#1e1b4b", border: "#4f46e5", text: "#a5b4fc", dot: "#818cf8" },
+  Vendu:      { bg: "#0c0a09", border: "#57534e", text: "#a8a29e", dot: "#78716c" },
 };
 
 export const LEAD_STATUS_CONFIG: Record<
@@ -163,21 +201,40 @@ export const LEAD_STATUS_CONFIG: Record<
   Qualifié: { bg: "#422006", border: "#d97706", text: "#fcd34d" },
 };
 
-export const STATUS_CYCLE: Record<PropertyStatus, PropertyStatus> = {
-  Estimation: "Actif",
-  Actif:      "Compromis",
-  Compromis:  "Vendu",
-  Vendu:      "Estimation",
+export const STATUS_ORDER: PropertyStatus[] = ["Estimation", "Actif", "Compromis", "Vendu"];
+export const LEAD_STATUS_ORDER: LeadStatus[] = ["Nouveau", "Contacté", "Qualifié"];
+
+export const ACTIVITY_ICON: Record<ActivityType, string> = {
+  lead_added:          "👤",
+  status_changed:      "🔄",
+  lead_status_changed: "✅",
+  property_added:      "🏠",
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Formatting Helpers ───────────────────────────────────────────────────────
 
-export function fmtEur(n: number): string {
+export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
-  }).format(n);
+  }).format(value);
+}
+
+export function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  const pairs = digits.match(/.{1,2}/g) ?? [];
+  return pairs.join(" ");
+}
+
+export function relativeDate(ts: number): string {
+  const diff = Date.now() - ts;
+  if (diff < DAY) return "Aujourd'hui";
+  if (diff < 2 * DAY) return "Hier";
+  return new Date(ts).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+  });
 }
 
 export function getInitials(name: string): string {
@@ -188,3 +245,6 @@ export function getInitials(name: string): string {
     .slice(0, 2)
     .toUpperCase();
 }
+
+// Legacy alias kept for any remaining call-sites
+export const fmtEur = formatCurrency;

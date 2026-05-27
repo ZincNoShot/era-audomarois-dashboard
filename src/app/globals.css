@@ -34,20 +34,30 @@ body {
   border-radius: 2px;
 }
 
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulseDot {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes barGrow {
+  from { width: 0; }
 }
 
 .animate-fade-in {
@@ -57,6 +67,20 @@ body {
 .animate-pulse-dot {
   animation: pulseDot 2s ease infinite;
 }
+
+.animate-backdrop {
+  animation: backdropIn 0.2s ease forwards;
+}
+
+.animate-modal {
+  animation: modalSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-bar {
+  animation: barGrow 0.9s ease forwards;
+}
+
+/* ─── Form resets ─────────────────────────────────────────────────────────── */
 
 input,
 select,
@@ -69,4 +93,40 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
+}
+
+/* ─── Toggle switch ───────────────────────────────────────────────────────── */
+
+.toggle-track {
+  display: inline-flex;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toggle-track.on {
+  background: #16a34a22;
+  border-color: #16a34a;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #52525b;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle-track.on .toggle-thumb {
+  transform: translateX(16px);
+  background: #22c55e;
 }

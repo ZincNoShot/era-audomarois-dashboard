@@ -3,8 +3,29 @@
 import { useState } from "react";
 import { Search, Bell } from "lucide-react";
 import Avatar from "./Avatar";
+import { NavSection } from "@/lib/data";
 
-export default function Topbar() {
+const VIEW_LABELS: Record<NavSection, string> = {
+  dashboard:   "Tableau de bord",
+  properties:  "Propriétés",
+  leads:       "Leads Acquéreurs",
+  performance: "Performance Équipe",
+  settings:    "Paramètres",
+};
+
+const PLACEHOLDERS: Record<NavSection, string> = {
+  dashboard:   "Rechercher un mandat, un agent…",
+  properties:  "Rechercher par adresse, titre, agent…",
+  leads:       "Rechercher un prospect…",
+  performance: "Rechercher un agent…",
+  settings:    "Rechercher un paramètre…",
+};
+
+interface TopbarProps {
+  currentView: NavSection;
+}
+
+export default function Topbar({ currentView }: TopbarProps) {
   const [hasNotif, setHasNotif] = useState(true);
 
   return (
@@ -20,9 +41,30 @@ export default function Topbar() {
         position: "sticky",
         top: 0,
         zIndex: 10,
+        flexShrink: 0,
       }}
     >
-      {/* Search */}
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "#3f3f46",
+          whiteSpace: "nowrap",
+          letterSpacing: "0.02em",
+        }}
+      >
+        {VIEW_LABELS[currentView]}
+      </span>
+
+      <div
+        style={{
+          width: 1,
+          height: 14,
+          background: "#27272a",
+          flexShrink: 0,
+        }}
+      />
+
       <div style={{ flex: 1, position: "relative" }}>
         <Search
           size={13}
@@ -32,10 +74,11 @@ export default function Topbar() {
             top: "50%",
             transform: "translateY(-50%)",
             color: "#3f3f46",
+            pointerEvents: "none",
           }}
         />
         <input
-          placeholder="Rechercher un mandat, un agent..."
+          placeholder={PLACEHOLDERS[currentView]}
           style={{
             width: "100%",
             maxWidth: 380,
@@ -49,7 +92,6 @@ export default function Topbar() {
         />
       </div>
 
-      {/* Bell */}
       <button
         onClick={() => setHasNotif(false)}
         style={{
@@ -84,7 +126,6 @@ export default function Topbar() {
         )}
       </button>
 
-      {/* Avatar */}
       <Avatar initials="DA" color="#e53e3e" size={30} />
     </header>
   );
